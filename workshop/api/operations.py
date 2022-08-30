@@ -1,10 +1,10 @@
 from fastapi import APIRouter
-from typing import List
-from ..models.operations import Operation
-from ..database import get_session
-from .. import tables
+from typing import List , Optional
+from ..models.operations import Operation, OperationKind
 from fastapi import Depends
-from sqlalchemy.orm import Session
+from ..services.operations import OperationsService
+
+
 
 router = APIRouter(
     prefix='/operations'
@@ -12,11 +12,8 @@ router = APIRouter(
 
 
 @router.get("/", response_model=List[Operation])
-def get_operations(session: Session = Depends(get_session)):
-    session = Session()
-    operations = (
-        session
-        .query(tables.Operation)
-        .all()
-    )
-    return operations
+def get_operations(
+        kind: Optional[OperationKind] = None,
+        service: OperationsService = Depends(),
+):
+    return service.get_list(kind=kind)

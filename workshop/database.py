@@ -13,6 +13,7 @@ Session = sessionmaker(
     autoflush=False,
 )
 
+
 def get_session() -> Session:
     session = Session()
     try:
