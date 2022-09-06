@@ -4,12 +4,19 @@ from fastapi import Depends, HTTPException, status
 from pydantic import ValidationError
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
+from fastapi.security import OAuth2PasswordBearer
 
 
 from ..database import get_session
 from ..settings import settings
 from .. import tables
 from ..models.auth import User, Token, UserCreate
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/auth/sign-in/')
+
+
+def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
+    return AuthService.validate_token(token)
 
 
 class AuthService:
@@ -75,4 +82,28 @@ class AuthService:
         )
         self.session.add(user)
         self.session.commit()
+        return self.create_token(user)
+
+    def authenticate_user(self, username: str, password: str) -> Token:
+        exception = HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={
+                'WWW-Authenticate': 'Bearer'
+            }
+        )
+
+        user = (
+            self.session
+            .query(tables.User)
+            .filter(tables.User.username == username)
+            .first()
+        )
+
+        if not user:
+            raise exception
+
+        if not self.verify_password(password, user.password_hash):
+            raise exception
+
         return self.create_token(user)
